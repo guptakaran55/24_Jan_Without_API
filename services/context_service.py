@@ -1,17 +1,15 @@
-# services/context_service.py
-# Smart context builder with time window awareness
+# services/context_service.py - SEND ALL APPLIANCES VERSION
+# Replace your current services/context_service.py
 
 from database import queries as db
 
 def build_smart_context(session_id, user_id, family_id):
     """
-    Build context that shows:
-    1. What appliances have been saved (summary only, not full conversation)
-    2. What time windows are occupied
-    3. What time windows are still available
+    Build context showing ALL saved appliances (not just last 5)
+    This helps LLM detect duplicates!
     """
     
-    # Get all saved appliances
+    # Get ALL saved appliances
     appliances = db.get_session_appliances(session_id)
     
     # Analyze time windows
@@ -54,13 +52,10 @@ def extract_windows(appliance):
     return windows
 
 def analyze_time_windows(appliances):
-    """
-    Analyze which time windows are occupied and which are free
-    Returns occupied windows and suggests available windows
-    """
+    """Analyze which time windows are occupied and which are free"""
     
     # Create 24-hour timeline (in 30-minute blocks)
-    timeline = [{'occupied': False, 'appliances': []} for _ in range(48)]  # 48 blocks of 30 min
+    timeline = [{'occupied': False, 'appliances': []} for _ in range(48)]
     
     # Mark occupied blocks
     for appliance in appliances:
@@ -68,7 +63,6 @@ def analyze_time_windows(appliances):
             start = appliance.get(f'window_{i}_start')
             end = appliance.get(f'window_{i}_end')
             if start is not None and end is not None:
-                # Mark blocks as occupied
                 start_block = start // 30
                 end_block = end // 30
                 for block in range(start_block, min(end_block + 1, 48)):
@@ -101,7 +95,6 @@ def analyze_time_windows(appliances):
                 })
                 current_period = None
     
-    # Add last period if exists
     if current_period:
         occupied.append({
             'start': current_period['start'],
@@ -111,14 +104,14 @@ def analyze_time_windows(appliances):
             'appliances': list(current_period['appliances'])
         })
     
-    # Find available windows (gaps > 1 hour)
+    # Find available windows
     available = []
     for i in range(len(occupied) - 1):
         gap_start = occupied[i]['end']
         gap_end = occupied[i + 1]['start']
         gap_duration = gap_end - gap_start
         
-        if gap_duration >= 60:  # At least 1 hour gap
+        if gap_duration >= 60:
             available.append({
                 'start': gap_start,
                 'end': gap_end,
@@ -127,9 +120,9 @@ def analyze_time_windows(appliances):
                 'duration_hours': gap_duration / 60
             })
     
-    # Check for gaps at start and end of day
+    # Check gaps at start/end of day
     if not occupied or occupied[0]['start'] > 60:
-        start = 0 if not occupied else 0
+        start = 0
         end = occupied[0]['start'] if occupied else 1440
         if end - start >= 60:
             available.insert(0, {
@@ -164,16 +157,21 @@ def minutes_to_time(minutes):
     return f"{hours:02d}:{mins:02d}"
 
 def format_context_for_prompt(context):
-    """Format context into a readable string for the LLM prompt"""
+    """
+    Format context showing ALL appliances (not just last 5)
+    This helps LLM detect duplicates!
+    """
     
     output = []
     
-    # Summary of saved appliances
+    # Summary of ALL saved appliances
     if context['total_appliances'] > 0:
         output.append(f"✓ {context['total_appliances']} appliances saved so far:")
-        for app in context['saved_appliances_summary'][-5:]:  # Show last 5
+        output.append("\nCOMPLETE LIST (check for duplicates before adding new ones!):")
+        
+        for i, app in enumerate(context['saved_appliances_summary'], 1):
             windows_str = ', '.join([f"{w['start_time']}-{w['end_time']}" for w in app['windows']])
-            output.append(f"  • {app['name']} ({app['number']}x, {app['power']}W) - used during: {windows_str}")
+            output.append(f"  {i}. {app['name']} ({app['number']}x, {app['power']}W, {app['func_time']/60:.1f}h/day) - {windows_str}")
     else:
         output.append("No appliances saved yet.")
     
@@ -182,15 +180,15 @@ def format_context_for_prompt(context):
     
     if context['occupied_windows']:
         output.append("⏰ Already covered time periods:")
-        for window in context['occupied_windows'][:5]:  # Show first 5
-            appliances_str = ', '.join(window['appliances'][:3])  # Show max 3 appliances
+        for window in context['occupied_windows'][:10]:
+            appliances_str = ', '.join(window['appliances'][:5])
             output.append(f"  • {window['start_time']}-{window['end_time']}: {appliances_str}")
     
     if context['available_windows']:
-        output.append("\n⏳ Available time periods (ask about these):")
-        for window in context['available_windows'][:3]:  # Show first 3
-            output.append(f"  • {window['start_time']}-{window['end_time']} ({window['duration_hours']:.1f}h available)")
+        output.append("\n⏳ Available time periods:")
+        for window in context['available_windows'][:5]:
+            output.append(f"  • {window['start_time']}-{window['end_time']} ({window['duration_hours']:.1f}h)")
     else:
-        output.append("\n✓ Full 24-hour schedule covered!")
+        output.append("\n✓ Major time periods covered. Keep listening for more appliances!")
     
     return '\n'.join(output)
