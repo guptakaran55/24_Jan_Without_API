@@ -1,5 +1,5 @@
-# main.py - SUPPORTS BOTH OLLAMA AND GOOGLE GEMINI
-# Replace your current main.py with this
+# main.py - MULTI-LLM SUPPORT: Ollama, Google Gemini, Perplexity, Claude
+# Choose your LLM at runtime!
 
 import uuid
 import os
@@ -9,20 +9,75 @@ from dotenv import load_dotenv
 from database.connection import init_pool, close_pool
 from database import queries as db
 from services.context_service import build_smart_context, format_context_for_prompt
-from utils.json_extractor import extract_json
+from utils.json_extractor import extract_all_json
 from services.validation_service import validate_appliance
 
 load_dotenv()
 
-# Choose LLM provider
-USE_GOOGLE = os.getenv('GOOGLE_API_KEY') is not None
+def select_llm_provider():
+    """Let user choose which LLM to use"""
+    print("\n" + "="*80)
+    print("🤖 SELECT YOUR LLM PROVIDER")
+    print("="*80)
+    
+    # Check which API keys are available
+    providers = []
+    
+    if os.getenv('GOOGLE_API_KEY'):
+        providers.append(('google', '🌐 Google Gemini (Fast, Free tier)'))
+    
+    if os.getenv('PERPLEXITY_API_KEY'):
+        providers.append(('perplexity', '🔍 Perplexity (Research-focused)'))
+    
+    if os.getenv('ANTHROPIC_API_KEY'):
+        providers.append(('claude', '🧠 Claude (Anthropic, High quality)'))
+    
+    # Ollama always available (local)
+    providers.append(('ollama', '🏠 Ollama (Local, Free, Private)'))
+    
+    if len(providers) == 1:
+        print(f"\nOnly one provider available: {providers[0][1]}")
+        return providers[0][0]
+    
+    # Show options
+    print("\nAvailable providers:")
+    for i, (key, name) in enumerate(providers, 1):
+        print(f"  {i}. {name}")
+    
+    # Get user choice
+    while True:
+        try:
+            choice = input(f"\nSelect provider (1-{len(providers)}): ").strip()
+            idx = int(choice) - 1
+            
+            if 0 <= idx < len(providers):
+                selected = providers[idx][0]
+                print(f"✓ Selected: {providers[idx][1]}\n")
+                return selected
+            else:
+                print(f"❌ Please enter a number between 1 and {len(providers)}")
+        except ValueError:
+            print("❌ Please enter a valid number")
+        except KeyboardInterrupt:
+            print("\n\n👋 Exiting...\n")
+            exit(0)
 
-if USE_GOOGLE:
+# Select LLM provider
+SELECTED_LLM = select_llm_provider()
+
+# Import the appropriate client
+if SELECTED_LLM == 'google':
     from llm.google_client import call_google_gemini as call_llm
-    print("🌐 Using Google Gemini API")
-else:
+    PROVIDER_NAME = "Google Gemini"
+elif SELECTED_LLM == 'perplexity':
+    from llm.perplexity_client import call_perplexity as call_llm
+    PROVIDER_NAME = "Perplexity"
+elif SELECTED_LLM == 'claude':
+    from llm.claude_client import call_claude as call_llm
+    PROVIDER_NAME = "Claude (Anthropic)"
+else:  # ollama
     from llm.client import call_ollama as call_llm
-    print("🏠 Using Ollama (local)")
+    PROVIDER_NAME = "Ollama (local)"
 
 from llm.prompts import build_system_prompt
 
@@ -83,15 +138,13 @@ def show_saved_appliances(session_id):
     print("="*80 + "\n")
 
 def chat_loop(session):
-    """Main chat loop"""
+    """Main chat loop - WITH LOOP PREVENTION AND MULTIPLE APPLIANCE SUPPORT"""
     session_id = session['session_id']
     user_id = session['user_id']
     family_id = session['family_id']
     
-    provider = "Google Gemini" if USE_GOOGLE else "Ollama"
-    
     print("\n" + "="*80)
-    print(f"⚡ ENERGY SURVEY CHATBOT (Powered by {provider})")
+    print(f"⚡ ENERGY SURVEY CHATBOT (Powered by {PROVIDER_NAME})")
     print("="*80)
     print("\nI'll save appliances as we talk and show you what's stored!")
     print("\nCommands:")
@@ -106,15 +159,25 @@ def chat_loop(session):
     db.save_message(session_id, user_id, 'assistant', greeting)
     
     appliance_count = 0
+    last_response = None
+    consecutive_duplicates = 0
+    MAX_DUPLICATES = 3
     
     while True:
         user_message = input("You: ").strip()
         
-        if user_message.lower() in ['quit', 'exit', 'bye']:
+        # Handle empty input - just skip
+        if not user_message:
+            continue
+        
+        # Exit keywords - check BEFORE processing
+        exit_keywords = ['quit', 'exit', 'bye', 'goodbye', "that's it", 'thats it', 'nothing else', 'no more']
+        if any(keyword in user_message.lower() for keyword in exit_keywords):
             show_saved_appliances(session_id)
-            print(f"\n✓ Session complete! Collected {appliance_count} appliances.\n")
+            print(f"\n✓ Session complete! Collected {appliance_count} appliances. Thank you!\n")
             break
         
+        # Special commands
         if user_message.lower() == 'list':
             show_saved_appliances(session_id)
             continue
@@ -124,9 +187,6 @@ def chat_loop(session):
             print("\n" + format_context_for_prompt(context) + "\n")
             continue
         
-        if not user_message:
-            continue
-        
         # Save user message
         db.save_message(session_id, user_id, 'user', user_message)
         
@@ -134,7 +194,7 @@ def chat_loop(session):
         context = build_smart_context(session_id, user_id, family_id)
         context_summary = format_context_for_prompt(context)
         
-        # Get conversation history (15 messages)
+        # Get conversation history
         recent_history = db.get_conversation_history(session_id, limit=15)
         
         # Get reference data
@@ -158,7 +218,7 @@ def chat_loop(session):
                     'content': clean_msg
                 })
         
-        # Call LLM (Google or Ollama)
+        # Call LLM
         print("\n[Assistant is thinking...]")
         response = call_llm(messages, system_prompt)
         
@@ -166,66 +226,84 @@ def chat_loop(session):
             print(f"\n❌ Error: {response['error']}\n")
             continue
         
-        # Extract JSON if present
-        extracted_data = extract_json(response['text'])
+        # ========== EXTRACT ALL JSON BLOCKS (SUPPORTS MULTIPLE APPLIANCES) ==========
+        extracted_appliances = extract_all_json(response['text'])
         
-        # Save appliance if JSON found
-        if extracted_data:
-            print(f"\n💾 [Extracting appliance data...]")
-            print(f"   Name: {extracted_data.get('name', 'Unknown')}")
-            print(f"   Quantity: {extracted_data.get('number', 1)}")
-            print(f"   Power: {extracted_data.get('power', '?')}W")
-            print(f"   Usage: {extracted_data.get('func_time', 0)/60:.1f} hours/day")
+        if extracted_appliances:
+            print(f"\n💾 [Found {len(extracted_appliances)} appliance(s) in response...]")
             
-            window_1 = extracted_data.get('window_1', [])
-            if len(window_1) == 2:
-                print(f"   Time: {format_time_window(window_1[0], window_1[1])}")
-            
-            # Validate
-            validation = validate_appliance(extracted_data)
-            
-            if validation['valid'] or len(validation['errors']) <= 1:
-                extracted_data['session_id'] = session_id
-                extracted_data['user_id'] = user_id
-                extracted_data['family_id'] = family_id
+            for idx, extracted_data in enumerate(extracted_appliances, 1):
+                print(f"\n📋 Appliance {idx}/{len(extracted_appliances)}:")
+                print(f"   Name: {extracted_data.get('name', 'Unknown')}")
+                print(f"   Quantity: {extracted_data.get('number', 1)}")
+                print(f"   Power: {extracted_data.get('power', '?')}W")
+                print(f"   Usage: {extracted_data.get('func_time', 0)/60:.1f} hours/day")
                 
-                # ========== DUPLICATE CHECK ADDED HERE ==========
-                # Check if this appliance already exists
-                window_start = window_1[0] if len(window_1) >= 2 else None
-                appliance_name = extracted_data.get('name', '')
+                window_1 = extracted_data.get('window_1', [])
+                if len(window_1) == 2:
+                    print(f"   Time: {format_time_window(window_1[0], window_1[1])}")
                 
-                if db.appliance_exists(session_id, appliance_name, window_start):
-                    print(f"\n⚠️  DUPLICATE DETECTED!")
-                    print(f"   '{appliance_name}' with same time window already saved.")
-                    print(f"   Skipping duplicate entry.")
-                else:
-                    # Not a duplicate - save it
-                    try:
-                        saved = db.save_appliance(extracted_data)
-                        if saved:
-                            appliance_count += 1
-                            print(f"\n✅ SAVED to database! (Total: {appliance_count} appliances)")
+                # Validate
+                validation = validate_appliance(extracted_data)
+                
+                if validation['valid'] or len(validation['errors']) <= 1:
+                    extracted_data['session_id'] = session_id
+                    extracted_data['user_id'] = user_id
+                    extracted_data['family_id'] = family_id
+                    
+                    # Check for duplicate
+                    window_start = window_1[0] if len(window_1) >= 2 else None
+                    appliance_name = extracted_data.get('name', '')
+                    
+                    if db.appliance_exists(session_id, appliance_name, window_start):
+                        consecutive_duplicates += 1
+                        print(f"\n   ⚠️  DUPLICATE! ({consecutive_duplicates}/{MAX_DUPLICATES})")
+                        print(f"      '{appliance_name}' with same time window already saved.")
+                        
+                        if consecutive_duplicates >= MAX_DUPLICATES:
+                            print(f"\n⚠️  Too many duplicates detected. Ending conversation.\n")
                             show_saved_appliances(session_id)
-                        else:
-                            print("\n⚠️  Save returned None")
-                    except Exception as e:
-                        print(f"\n❌ Save failed: {e}")
-                # ================================================
-            else:
-                print(f"\n⚠️  Validation failed: {validation['errors']}")
+                            break  # Exit the for loop
+                    else:
+                        # Not a duplicate - save it!
+                        consecutive_duplicates = 0  # Reset counter
+                        try:
+                            saved = db.save_appliance(extracted_data)
+                            if saved:
+                                appliance_count += 1
+                                print(f"\n   ✅ SAVED! (Total: {appliance_count} appliances)")
+                            else:
+                                print("\n   ⚠️  Save returned None")
+                        except Exception as e:
+                            print(f"\n   ❌ Save failed: {e}")
+                else:
+                    print(f"\n   ⚠️  Validation failed: {validation['errors']}")
+            
+            # Show all saved appliances after processing all from this response
+            if appliance_count > 0:
+                show_saved_appliances(session_id)
+        # ==============================================================================
         
         # Clean and show response
         clean_response = re.sub(r'\[JSON_DATA_START\].*?\[JSON_DATA_END\]', '', 
                                response['text'], flags=re.DOTALL).strip()
         clean_response = re.sub(r'\{[^}]*"name"[^}]*\}', '', clean_response).strip()
         
+        # LOOP DETECTION - prevent same response twice
+        if clean_response and clean_response == last_response:
+            print("\n⚠️  [Loop detected - the assistant seems stuck]")
+            print("Type 'quit' to exit or ask a different question.\n")
+            last_response = None  # Reset
+            continue
+        
         if clean_response:
             print(f"\nAssistant: {clean_response}\n")
+            last_response = clean_response
         
-        # Save assistant response
-        db.save_message(session_id, user_id, 'assistant', response['text'], extracted_data)
+        # Save assistant response (use last extracted data if multiple)
+        last_extracted = extracted_appliances[-1] if extracted_appliances else None
+        db.save_message(session_id, user_id, 'assistant', response['text'], last_extracted)
 
-        
 def main():
     """Main entry point"""
     try:

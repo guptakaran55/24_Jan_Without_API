@@ -84,6 +84,13 @@ CRITICAL RULES:
 6. wd_we_type: ALWAYS use 2 unless user specifically says "only weekdays" or "only weekends"
   Values: 0=weekdays only, 1=weekends only, 2=both (DEFAULT)
 7. Never say "we're done" unless user explicitly says quit/goodbye
+8. If user mentions MULTIPLE appliances in ONE message, then Output MULTIPLE JSON blocks (one for each appliance)!
+                      Example:
+            User: "I have a light bulb and a refrigerator"
+            You: [OUTPUT JSON for light bulb]
+                [OUTPUT JSON for refrigerator]
+                "Got both! Anything else?"
+
 
 DUPLICATE DETECTION RULES:
 1. Similar appliance name + similar time + same user ID +same family ID = DUPLICATE (warn user!)
