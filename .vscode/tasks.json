@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "python: run main.py",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-Command",
+                "chcp 65001; C:/Users/gupta/PycharmProjects/Conversation_2_Devices/24_Jan_Without_API/.venv/Scripts/python.exe main.py"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PYTHONIOENCODING": "utf-8"
+                }
+            },
+            "problemMatcher": [
+                "$python"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            }
+        }
+    ]
+}

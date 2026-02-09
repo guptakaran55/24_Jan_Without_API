@@ -1,0 +1,86 @@
+{
+  "survey_date": "2026-02-09 22:35:45",
+  "User_ID": "fa61ea78-9d35-4784-a7c4-ac0eb080bdcb",
+  "Family_ID": "9c133280-247f-4916-871d-e9b7a48e96e2",
+  "session_id": "2744e9aa-ffd5-4a75-a76b-b27f130b580c",
+  "random_var_w": 0.2,
+  "total_appliances": 5,
+  "total_daily_energy_kwh": 6.69,
+  "appliances": [
+    {
+      "name": "Electric Geyser",
+      "number": 1,
+      "power": 2000,
+      "func_time": 10,
+      "num_windows": 1,
+      "window_1": [
+        360,
+        420
+      ],
+      "func_cycle": 10,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Lights",
+      "number": 1,
+      "power": 60,
+      "func_time": 360,
+      "num_windows": 1,
+      "window_1": [
+        1020,
+        1380
+      ],
+      "func_cycle": 1,
+      "fixed": "yes",
+      "occasional_use": 1.0,
+      "wd_we_type": 0
+    },
+    {
+      "name": "Computer",
+      "number": 1,
+      "power": 200,
+      "func_time": 480,
+      "num_windows": 1,
+      "window_1": [
+        0,
+        1440
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 1
+    },
+    {
+      "name": "Television",
+      "number": 1,
+      "power": 100,
+      "func_time": 480,
+      "num_windows": 1,
+      "window_1": [
+        0,
+        1440
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 1
+    },
+    {
+      "name": "Refrigerator",
+      "number": 1,
+      "power": 150,
+      "func_time": 1440,
+      "num_windows": 1,
+      "window_1": [
+        0,
+        1440
+      ],
+      "func_cycle": 30,
+      "fixed": "yes",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    }
+  ]
+}

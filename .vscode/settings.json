@@ -1,0 +1,21 @@
+{
+    "python.defaultInterpreterPath": "C:/Users/gupta/PycharmProjects/Conversation_2_Devices/24_Jan_Without_API/.venv/Scripts/python.exe",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.formatting.provider": "black",
+    "python.testing.pytestEnabled": false,
+    "[python]": {
+        "editor.defaultFormatter": null
+    },
+    "terminal.integrated.fontFamily": "\"Noto Sans Devanagari\", \"Noto Sans\", \"Mangal\", Consolas, 'Courier New', monospace",
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.env.windows": {
+        "PYTHONIOENCODING": "utf-8"
+    },
+    "files.encoding": "utf8",
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "python.terminal.executeInFileDir": true,
+    "python.REPL.enableREPLSmartSend": false
+}

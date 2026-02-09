@@ -1,4 +1,4 @@
-# llm/google_client.py - FIXED VERSION
+# llm/google_client.py - FIXED VERSION WITH CONFIGURABLE TOKEN LIMIT
 # Replace your current llm/google_client.py with this
 
 import os
@@ -19,6 +19,15 @@ elif GOOGLE_MODEL == 'gemini-1.5-pro':
 
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
+
+# Default token limit (can be overridden by conversation mode)
+_max_output_tokens = 4096
+
+def set_max_output_tokens(tokens):
+    """Set the max output tokens (called by main.py based on conversation mode)"""
+    global _max_output_tokens
+    _max_output_tokens = tokens
+    print(f"   LLM output token limit: {tokens}")
 
 def call_google_gemini(messages, system_prompt):
     """
@@ -45,7 +54,7 @@ def call_google_gemini(messages, system_prompt):
                 'temperature': 0.7,
                 'top_p': 0.95,
                 'top_k': 40,
-                'max_output_tokens': 2048,
+                'max_output_tokens': _max_output_tokens,
             },
             system_instruction=system_prompt if system_prompt else None
         )
@@ -113,12 +122,6 @@ def test_google_connection():
         return False
     
     try:
-        # List available models first
-        print("\nAvailable models:")
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                print(f"  • {m.name}")
-        
         print(f"\nTesting model: {GOOGLE_MODEL}")
         
         model = genai.GenerativeModel(GOOGLE_MODEL)
@@ -135,8 +138,6 @@ def test_google_connection():
             
     except Exception as e:
         print(f"✗ Connection failed: {e}")
-        print("\nTry updating your .env to:")
-        print("GOOGLE_MODEL=gemini-1.5-flash-latest")
         return False
 
 if __name__ == "__main__":

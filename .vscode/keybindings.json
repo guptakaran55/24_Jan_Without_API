@@ -1,0 +1,7 @@
+[
+    {
+        "key": "ctrl+alt+n",
+        "command": "-python-envs.runAsTask",
+        "when": "resourceLangId == python"
+    }
+]
