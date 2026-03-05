@@ -1,25 +1,254 @@
 {
-  "survey_date": "2026-03-05 14:44:57",
-  "User_ID": "383b65f5-3969-4042-beb9-2366275716ad",
-  "Family_ID": "eaa4b1a0-4ae5-426b-a958-67885619a8ba",
-  "session_id": "8705c5df-d054-4923-812b-c1368c006db9",
-  "random_var_w": 0.2,
-  "total_appliances": 1,
-  "total_daily_energy_kwh": 0.06,
+  "survey_date": "2025-11-09 12:57:51",
+  "total_appliances": 15,
   "appliances": [
     {
-      "name": "Bulb",
+      "name": "Refrigerator",
       "number": 1,
-      "power": 10,
-      "func_time": 360,
+      "power": 150,
+      "func_time": 1000,
       "num_windows": 1,
       "window_1": [
-        1020,
-        1380
+        0,
+        1440
       ],
       "func_cycle": 1,
       "fixed": "no",
       "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "TV (Living Room)",
+      "number": 1,
+      "power": 100,
+      "func_time": 180,
+      "num_windows": 2,
+      "window_1": [
+        1020,
+        1200
+      ],
+      "window_2": [
+        1260,
+        1380
+      ],
+      "func_cycle": 30,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Laptop (Wife's Work)",
+      "number": 1,
+      "power": 50,
+      "func_time": 420,
+      "num_windows": 1,
+      "window_1": [
+        480,
+        1080
+      ],
+      "func_cycle": 60,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 0
+    },
+    {
+      "name": "Desktop PC (Child's Study/Leisure)",
+      "number": 1,
+      "power": 200,
+      "func_time": 210,
+      "num_windows": 2,
+      "window_1": [
+        900,
+        1080
+      ],
+      "window_2": [
+        1200,
+        1380
+      ],
+      "func_cycle": 30,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Washing Machine",
+      "number": 1,
+      "power": 2000,
+      "func_time": 95,
+      "num_windows": 1,
+      "window_1": [
+        600,
+        960
+      ],
+      "func_cycle": 90,
+      "fixed": "no",
+      "occasional_use": 0.5,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Dishwasher",
+      "number": 1,
+      "power": 1800,
+      "func_time": 120,
+      "num_windows": 1,
+      "window_1": [
+        1230,
+        1410
+      ],
+      "func_cycle": 100,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Oven",
+      "number": 1,
+      "power": 2500,
+      "func_time": 45,
+      "num_windows": 1,
+      "window_1": [
+        1080,
+        1260
+      ],
+      "func_cycle": 20,
+      "fixed": "no",
+      "occasional_use": 0.7,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Microwave",
+      "number": 1,
+      "power": 1000,
+      "func_time": 10,
+      "num_windows": 2,
+      "window_1": [
+        480,
+        600
+      ],
+      "window_2": [
+        1080,
+        1260
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Wi-Fi Router",
+      "number": 1,
+      "power": 10,
+      "func_time": 1000,
+      "num_windows": 1,
+      "window_1": [
+        0,
+        1440
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Electric Kettle",
+      "number": 1,
+      "power": 2200,
+      "func_time": 5,
+      "num_windows": 2,
+      "window_1": [
+        420,
+        540
+      ],
+      "window_2": [
+        1020,
+        1200
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Hair Dryer",
+      "number": 1,
+      "power": 1800,
+      "func_time": 15,
+      "num_windows": 1,
+      "window_1": [
+        360,
+        540
+      ],
+      "func_cycle": 5,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "General Lighting (Living/Kitchen)",
+      "number": 8,
+      "power": 80,
+      "func_time": 300,
+      "num_windows": 2,
+      "window_1": [
+        480,
+        600
+      ],
+      "window_2": [
+        1020,
+        1380
+      ],
+      "func_cycle": 30,
+      "fixed": "yes",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Device Chargers (Phones/Tablets)",
+      "number": 3,
+      "power": 15,
+      "func_time": 180,
+      "num_windows": 2,
+      "window_1": [
+        360,
+        540
+      ],
+      "window_2": [
+        1260,
+        1410
+      ],
+      "func_cycle": 30,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Fan",
+      "number": 1,
+      "power": 75,
+      "func_time": 180,
+      "num_windows": 1,
+      "window_1": [
+        1080,
+        1320
+      ],
+      "func_cycle": 60,
+      "fixed": "no",
+      "occasional_use": 0.3,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Vacuum Cleaner",
+      "number": 1,
+      "power": 1600,
+      "func_time": 35,
+      "num_windows": 1,
+      "window_1": [
+        600,
+        900
+      ],
+      "func_cycle": 30,
+      "fixed": "no",
+      "occasional_use": 0.3,
       "wd_we_type": 2
     }
   ]

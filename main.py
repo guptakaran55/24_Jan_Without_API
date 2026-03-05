@@ -71,35 +71,132 @@ def select_llm_provider():
             exit(0)
 
 
-# Select LLM provider
-SELECTED_LLM = select_llm_provider()
+def select_startup_mode():
+    """
+    Ask the user what they want to do at startup:
+      1. Start a new chatbot survey (then optionally simulate)
+      2. Load an existing JSON and run RAMP simulation directly
+    
+    Returns:
+        'survey' or 'simulate'
+    """
+    ramp_tag = "✅" if RAMP_AVAILABLE else "❌ (not installed)"
+    
+    print("\n" + "="*80)
+    print("🏠 WHAT WOULD YOU LIKE TO DO?")
+    print("="*80)
+    print()
+    print(f"  1. 💬 Start a new energy survey (chatbot conversation)")
+    print(f"  2. ⚡ Simulate an existing JSON file (RAMP) {ramp_tag}")
+    print()
+    
+    while True:
+        choice = input("Select option (1/2) [1]: ").strip()
+        if choice in ('', '1'):
+            return 'survey'
+        elif choice == '2':
+            if not RAMP_AVAILABLE:
+                print("\n   ❌ RAMP is not installed.")
+                print("   Install with: pip install ramp-demand")
+                print("   Then re-run this script.\n")
+                continue
+            return 'simulate'
+        else:
+            print("   Please enter 1 or 2")
 
-# Select conversation mode
-CONV_MODE = select_conversation_mode()
 
-# Import the appropriate client
-if SELECTED_LLM == 'google':
-    from llm.google_client import call_google_gemini as call_llm, set_max_output_tokens
-    set_max_output_tokens(CONV_MODE['max_output_tokens'])
-    PROVIDER_NAME = "Google Gemini"
-elif SELECTED_LLM == 'claude':
-    from llm.claude_client import call_claude as call_llm
-    PROVIDER_NAME = "Claude (Anthropic)"
-else:
-    from llm.client import call_ollama as call_llm
-    PROVIDER_NAME = "Ollama (local)"
-
-from llm.prompts import build_system_prompt
-
-
-def start_new_session():
-    user_id = str(uuid.uuid4())
-    family_id = str(uuid.uuid4())
-    session_id = str(uuid.uuid4())
-    db.create_family(family_id, 1, 'Home')
-    db.create_user(user_id, family_id, 'adult', '[]')
-    db.create_session(session_id, user_id, family_id)
-    return {'session_id': session_id, 'user_id': user_id, 'family_id': family_id}
+def run_standalone_simulation():
+    """
+    Let the user pick a JSON file via popup and run RAMP simulation on it.
+    Called when user chooses option 2 at startup.
+    """
+    print("\n" + "="*80)
+    print("⚡ RAMP SIMULATION — Load Existing JSON")
+    print("="*80)
+    print("\nOpening file picker...")
+    
+    json_path = None
+    try:
+        from tkinter import Tk, filedialog
+        root = Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        json_path = filedialog.askopenfilename(
+            title="Select Survey JSON file for RAMP simulation",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialdir="."
+        )
+        root.destroy()
+    except ImportError:
+        json_path = input("Enter path to JSON file: ").strip().strip('"')
+    
+    if not json_path:
+        print("   No file selected.\n")
+        return
+    
+    # Load and validate the JSON
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            file_data = json.load(f)
+    except FileNotFoundError:
+        print(f"   ❌ File not found: {json_path}\n")
+        return
+    except json.JSONDecodeError as e:
+        print(f"   ❌ Invalid JSON: {e}\n")
+        return
+    
+    appliances = file_data.get('appliances', [])
+    if not appliances:
+        print(f"   ❌ No appliances found in {os.path.basename(json_path)}\n")
+        return
+    
+    # Preview
+    print(f"\n📂 Loaded: {os.path.basename(json_path)}")
+    print(f"   Appliances: {len(appliances)}")
+    print()
+    print(f"   {'#':<3} {'Name':<22} {'Qty':<4} {'Power':<8} {'Hours/day':<10} {'Window 1'}")
+    print(f"   {'-'*65}")
+    for i, a in enumerate(appliances, 1):
+        name = a.get('name', '?')[:21]
+        qty = a.get('number', 1)
+        power = f"{a.get('power', '?')}W"
+        ft = a.get('func_time', 0)
+        hours = f"{ft/60:.1f}h" if ft else "?"
+        w1 = a.get('window_1')
+        if w1 and len(w1) == 2 and w1[0] is not None:
+            w_str = f"{w1[0]//60:02d}:{w1[0]%60:02d}-{w1[1]//60:02d}:{w1[1]%60:02d}"
+        else:
+            w_str = "anytime"
+        print(f"   {i:<3} {name:<22} {qty:<4} {power:<8} {hours:<10} {w_str}")
+    
+    total_kwh = sum(
+        a.get('power', 0) * a.get('number', 1) * a.get('func_time', 0) / 60 / 1000
+        for a in appliances
+    )
+    print(f"   {'-'*65}")
+    print(f"   {'Estimated daily energy:':<48} {total_kwh:.2f} kWh")
+    print()
+    
+    # Run simulation
+    print("▶ Running RAMP simulation...")
+    result = run_ramp_simulation(file_data, show_plot=True)
+    
+    if result.get('success'):
+        print("\n✅ RAMP simulation completed successfully!")
+    else:
+        print(f"\n⚠️  RAMP simulation issue: {result.get('error', 'Unknown')}")
+    
+    # Ask if they want to run another or start a survey
+    print()
+    while True:
+        again = input("Run another simulation? (yes/no) [no]: ").strip().lower()
+        if again in ('', 'no', 'n'):
+            break
+        elif again in ('yes', 'y'):
+            run_standalone_simulation()
+            break
+        else:
+            print("   Please enter 'yes' or 'no'")
 
 
 def format_time_window(start, end):
@@ -206,10 +303,13 @@ def export_session_json(session_id, user_id, family_id):
         return None, export_data
 
 
-def ask_run_ramp_simulation(export_data):
+def ask_run_ramp_simulation(export_data, exported_filepath=None):
     """
     Ask the user if they want to run a RAMP simulation after export.
-    If yes, run it using the export data.
+    Offers three choices:
+      1. Run simulation on the just-exported survey JSON
+      2. Browse and select a different JSON file from disk
+      3. Skip simulation
     """
     if not RAMP_AVAILABLE:
         print("\n💡 Tip: Install RAMP to generate electricity consumption profiles!")
@@ -223,28 +323,20 @@ def ask_run_ramp_simulation(export_data):
     print("\n" + "-"*80)
     print("⚡ RAMP SIMULATION AVAILABLE")
     print("-"*80)
-    print("Would you like to generate a simulated electricity consumption profile")
-    print("using RAMP (stochastic load profile generator)?")
+    print("Would you like to generate a simulated electricity consumption profile?")
+    print()
+    print("  1. 📋 Simulate THIS survey (just exported)")
+    print("  2. 📂 Load a different JSON file from disk")
+    print("  3. ❌ Skip simulation")
     print()
     
     while True:
-        choice = input("Run RAMP simulation? (yes/no) [yes]: ").strip().lower()
-        if choice in ('', 'yes', 'y'):
-            # Ask for number of profiles
-            num_profiles = 1
-            try:
-                num_input = input("Number of daily profiles to simulate [1]: ").strip()
-                if num_input:
-                    num_profiles = max(1, int(num_input))
-            except ValueError:
-                num_profiles = 1
-            
-            # Run the simulation
-            result = run_ramp_simulation(
-                export_data,
-                num_profiles=num_profiles,
-                show_plot=True
-            )
+        choice = input("Select option (1/2/3) [1]: ").strip()
+        
+        # ─── Option 1: Simulate the current survey data ───
+        if choice in ('', '1'):
+            print("\n▶ Running RAMP simulation on current survey data...")
+            result = run_ramp_simulation(export_data, show_plot=True)
             
             if result.get('success'):
                 print("\n✅ RAMP simulation completed successfully!")
@@ -252,11 +344,73 @@ def ask_run_ramp_simulation(export_data):
                 print(f"\n⚠️  RAMP simulation issue: {result.get('error', 'Unknown')}")
             break
         
-        elif choice in ('no', 'n'):
+        # ─── Option 2: Pick a JSON file from disk ───
+        elif choice == '2':
+            json_path = None
+            try:
+                from tkinter import Tk, filedialog
+                root = Tk()
+                root.withdraw()
+                root.attributes('-topmost', True)
+                json_path = filedialog.askopenfilename(
+                    title="Select Survey JSON file for RAMP simulation",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                    initialdir="."
+                )
+                root.destroy()
+            except ImportError:
+                json_path = input("Enter path to JSON file: ").strip().strip('"')
+            
+            if not json_path:
+                print("   No file selected. Skipping simulation.\n")
+                break
+            
+            # Load and validate the JSON
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    file_data = json.load(f)
+            except FileNotFoundError:
+                print(f"   ❌ File not found: {json_path}\n")
+                continue
+            except json.JSONDecodeError as e:
+                print(f"   ❌ Invalid JSON: {e}\n")
+                continue
+            
+            appliances = file_data.get('appliances', [])
+            if not appliances:
+                print(f"   ❌ No appliances found in {os.path.basename(json_path)}\n")
+                continue
+            
+            print(f"\n📂 Loaded: {os.path.basename(json_path)}")
+            print(f"   Appliances: {len(appliances)}")
+            
+            # Preview the appliances
+            print(f"\n   {'#':<3} {'Name':<22} {'Power':<8} {'Hours/day':<10}")
+            print(f"   {'-'*50}")
+            for i, a in enumerate(appliances, 1):
+                name = a.get('name', '?')[:21]
+                power = f"{a.get('power', '?')}W"
+                ft = a.get('func_time', 0)
+                hours = f"{ft/60:.1f}h" if ft else "?"
+                print(f"   {i:<3} {name:<22} {power:<8} {hours:<10}")
+            print()
+            
+            print("▶ Running RAMP simulation on selected file...")
+            result = run_ramp_simulation(file_data, show_plot=True)
+            
+            if result.get('success'):
+                print("\n✅ RAMP simulation completed successfully!")
+            else:
+                print(f"\n⚠️  RAMP simulation issue: {result.get('error', 'Unknown')}")
+            break
+        
+        # ─── Option 3: Skip ───
+        elif choice == '3':
             print("   Skipping RAMP simulation.\n")
             break
+        
         else:
-            print("   Please enter 'yes' or 'no'")
+            print("   Please enter 1, 2, or 3")
 
 
 def replace_json_with_summary(message_text):
@@ -393,9 +547,9 @@ def chat_loop(session):
             show_saved_appliances(session_id)
             filepath, export_data = export_session_json(session_id, user_id, family_id)
             
-            # Offer RAMP simulation after export
+            # Offer RAMP simulation after export (with choice of current or file)
             if export_data:
-                ask_run_ramp_simulation(export_data)
+                ask_run_ramp_simulation(export_data, exported_filepath=filepath)
             
             # Recount appliances from DB after possible edits
             final_count = len(db.get_session_appliances(session_id))
@@ -418,19 +572,11 @@ def chat_loop(session):
             continue
         
         if user_message.lower() == 'simulate':
-            # Run RAMP simulation mid-conversation
+            # Run RAMP simulation mid-conversation (with choice of current or file)
             export_data, _ = build_export_data(session_id, user_id, family_id)
             if export_data and export_data.get('appliances'):
                 if RAMP_AVAILABLE:
-                    num_profiles = 1
-                    try:
-                        num_input = input("Number of daily profiles to simulate [1]: ").strip()
-                        if num_input:
-                            num_profiles = max(1, int(num_input))
-                    except ValueError:
-                        num_profiles = 1
-                    
-                    run_ramp_simulation(export_data, num_profiles=num_profiles, show_plot=True)
+                    ask_run_ramp_simulation(export_data)
                 else:
                     print("\n❌ RAMP is not installed.")
                     print("   Install with: pip install ramp-demand\n")
@@ -523,7 +669,7 @@ def chat_loop(session):
                             show_saved_appliances(session_id)
                             filepath, export_data = export_session_json(session_id, user_id, family_id)
                             if export_data:
-                                ask_run_ramp_simulation(export_data)
+                                ask_run_ramp_simulation(export_data, exported_filepath=filepath)
                             break
                     else:
                         consecutive_duplicates = 0
@@ -570,15 +716,24 @@ def chat_loop(session):
 def main():
     try:
         init_pool()
-        session = start_new_session()
-        print(f"🆔 Session ID: {session['session_id'][:8]}...")
         
         if RAMP_AVAILABLE:
             print("⚡ RAMP simulation: Ready")
         else:
             print("💡 RAMP simulation: Not available (install with: pip install ramp-demand)")
         
-        chat_loop(session)
+        # ─── Ask: Survey or Simulate existing? ───
+        startup_mode = select_startup_mode()
+        
+        if startup_mode == 'simulate':
+            # Jump straight to file picker + RAMP simulation
+            run_standalone_simulation()
+        else:
+            # Normal chatbot survey flow
+            session = start_new_session()
+            print(f"🆔 Session ID: {session['session_id'][:8]}...")
+            chat_loop(session)
+    
     except KeyboardInterrupt:
         print("\n\n👋 Exiting...\n")
     except Exception as e:

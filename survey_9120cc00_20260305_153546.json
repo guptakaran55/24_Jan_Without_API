@@ -1,0 +1,86 @@
+{
+  "survey_date": "2026-03-05 15:35:46",
+  "User_ID": "0e4952e3-ef7d-4e18-b6d8-26c6225e770d",
+  "Family_ID": "56138148-87bb-416c-81c5-32170f0ca186",
+  "session_id": "9120cc00-7066-4d3e-9171-e70802546af7",
+  "random_var_w": 0.2,
+  "total_appliances": 5,
+  "total_daily_energy_kwh": 8.1,
+  "appliances": [
+    {
+      "name": "Old Bulb",
+      "number": 1,
+      "power": 60,
+      "func_time": 360,
+      "num_windows": 1,
+      "window_1": [
+        1020,
+        1380
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Refrigerator",
+      "number": 1,
+      "power": 150,
+      "func_time": 1440,
+      "num_windows": 1,
+      "window_1": [
+        0,
+        1440
+      ],
+      "func_cycle": 30,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Electric Geyser",
+      "number": 1,
+      "power": 2000,
+      "func_time": 15,
+      "num_windows": 1,
+      "window_1": [
+        420,
+        435
+      ],
+      "func_cycle": 15,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "PC Workstation",
+      "number": 1,
+      "power": 200,
+      "func_time": 780,
+      "num_windows": 1,
+      "window_1": [
+        420,
+        1320
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Monitor",
+      "number": 2,
+      "power": 40,
+      "func_time": 780,
+      "num_windows": 1,
+      "window_1": [
+        420,
+        1320
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    }
+  ]
+}
