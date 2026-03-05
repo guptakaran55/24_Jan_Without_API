@@ -1,0 +1,26 @@
+{
+  "survey_date": "2026-03-05 14:44:57",
+  "User_ID": "383b65f5-3969-4042-beb9-2366275716ad",
+  "Family_ID": "eaa4b1a0-4ae5-426b-a958-67885619a8ba",
+  "session_id": "8705c5df-d054-4923-812b-c1368c006db9",
+  "random_var_w": 0.2,
+  "total_appliances": 1,
+  "total_daily_energy_kwh": 0.06,
+  "appliances": [
+    {
+      "name": "Bulb",
+      "number": 1,
+      "power": 10,
+      "func_time": 360,
+      "num_windows": 1,
+      "window_1": [
+        1020,
+        1380
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    }
+  ]
+}

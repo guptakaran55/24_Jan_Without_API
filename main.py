@@ -1,4 +1,4 @@
-# main.py - MULTI-LLM SUPPORT + CONVERSATION MODE + JSON EXPORT + EDIT MODE
+# main.py - MULTI-LLM SUPPORT + CONVERSATION MODE + JSON EXPORT + EDIT MODE + RAMP SIMULATION
 # Supported: Google Gemini, Claude (Anthropic), Ollama (local)
 
 import uuid
@@ -17,6 +17,20 @@ from conversation_mode import select_conversation_mode
 from appliance_editor import handle_edit_command
 
 load_dotenv()
+
+# ─────────────────────────────────────────────────
+# Check if RAMP is available (optional dependency)
+# ─────────────────────────────────────────────────
+RAMP_AVAILABLE = False
+try:
+    from ramp_simulation import run_ramp_simulation, run_ramp_from_json_file
+    from ramp.core.core import User  # Test actual RAMP import
+    RAMP_AVAILABLE = True
+except ImportError:
+    try:
+        from ramp_simulation import run_ramp_simulation, run_ramp_from_json_file
+    except ImportError:
+        pass
 
 
 def select_llm_provider():
@@ -120,11 +134,17 @@ def show_saved_appliances(session_id):
     print("="*80 + "\n")
 
 
-def export_session_json(session_id, user_id, family_id):
+def build_export_data(session_id, user_id, family_id):
+    """
+    Build the export data dict from the database.
+    This is used both by export_session_json and by the RAMP simulation.
+    
+    Returns:
+        tuple: (export_data dict, appliances list from DB) or (None, []) if no appliances
+    """
     appliances = db.get_session_appliances(session_id)
     if not appliances:
-        print("\n📄 No appliances to export.")
-        return None
+        return None, []
     
     appliance_list = []
     for a in appliances:
@@ -153,6 +173,17 @@ def export_session_json(session_id, user_id, family_id):
         "appliances": appliance_list
     }
     
+    return export_data, appliances
+
+
+def export_session_json(session_id, user_id, family_id):
+    """Export session data to a JSON file. Returns (filepath, export_data) tuple."""
+    export_data, appliances = build_export_data(session_id, user_id, family_id)
+    
+    if export_data is None:
+        print("\n📄 No appliances to export.")
+        return None, None
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"survey_{session_id[:8]}_{timestamp}.json"
     filepath = os.path.join(os.getcwd(), filename)
@@ -166,13 +197,66 @@ def export_session_json(session_id, user_id, family_id):
         print(json.dumps(export_data, indent=2, ensure_ascii=False))
         print("="*80)
         print(f"\n✅ Saved to: {filepath}")
-        print(f"   Appliances: {len(appliance_list)}")
+        print(f"   Appliances: {len(export_data['appliances'])}")
         print(f"   Daily energy: {export_data['total_daily_energy_kwh']} kWh/day\n")
-        return filepath
+        return filepath, export_data
     except Exception as e:
         print(f"\n❌ Failed to save file: {e}")
         print("\n" + json.dumps(export_data, indent=2, ensure_ascii=False))
-        return None
+        return None, export_data
+
+
+def ask_run_ramp_simulation(export_data):
+    """
+    Ask the user if they want to run a RAMP simulation after export.
+    If yes, run it using the export data.
+    """
+    if not RAMP_AVAILABLE:
+        print("\n💡 Tip: Install RAMP to generate electricity consumption profiles!")
+        print("   pip install ramp-demand")
+        print("   Then re-run — simulation will be offered automatically.\n")
+        return
+    
+    if export_data is None or not export_data.get('appliances'):
+        return
+    
+    print("\n" + "-"*80)
+    print("⚡ RAMP SIMULATION AVAILABLE")
+    print("-"*80)
+    print("Would you like to generate a simulated electricity consumption profile")
+    print("using RAMP (stochastic load profile generator)?")
+    print()
+    
+    while True:
+        choice = input("Run RAMP simulation? (yes/no) [yes]: ").strip().lower()
+        if choice in ('', 'yes', 'y'):
+            # Ask for number of profiles
+            num_profiles = 1
+            try:
+                num_input = input("Number of daily profiles to simulate [1]: ").strip()
+                if num_input:
+                    num_profiles = max(1, int(num_input))
+            except ValueError:
+                num_profiles = 1
+            
+            # Run the simulation
+            result = run_ramp_simulation(
+                export_data,
+                num_profiles=num_profiles,
+                show_plot=True
+            )
+            
+            if result.get('success'):
+                print("\n✅ RAMP simulation completed successfully!")
+            else:
+                print(f"\n⚠️  RAMP simulation issue: {result.get('error', 'Unknown')}")
+            break
+        
+        elif choice in ('no', 'n'):
+            print("   Skipping RAMP simulation.\n")
+            break
+        else:
+            print("   Please enter 'yes' or 'no'")
 
 
 def replace_json_with_summary(message_text):
@@ -270,17 +354,21 @@ def chat_loop(session):
     history_limit = CONV_MODE['history_limit']
     mode_style = CONV_MODE['prompt_style']
     
+    ramp_status = "✅ Available" if RAMP_AVAILABLE else "❌ Not installed (pip install ramp-demand)"
+    
     print("\n" + "="*80)
     print(f"⚡ ENERGY SURVEY CHATBOT (Powered by {PROVIDER_NAME})")
     print(f"   Mode: {CONV_MODE['label']}")
+    print(f"   RAMP Simulation: {ramp_status}")
     print("="*80)
     print("\nI'll save appliances as we talk and show you what's stored!")
     print("\nCommands:")
-    print("  'quit'     - Exit and export JSON")
-    print("  'list'     - Show all saved appliances")
-    print("  'edit'     - Edit, delete, or modify saved appliances")
-    print("  'export'   - Export JSON now (without quitting)")
-    print("  'schedule' - Show time window analysis")
+    print("  'quit'      - Exit, export JSON, and run RAMP simulation")
+    print("  'list'      - Show all saved appliances")
+    print("  'edit'      - Edit, delete, or modify saved appliances")
+    print("  'export'    - Export JSON now (without quitting)")
+    print("  'simulate'  - Run RAMP simulation now (without quitting)")
+    print("  'schedule'  - Show time window analysis")
     print("="*80 + "\n")
     
     greeting = "Hi! Tell me about your daily routine and the appliances you use!"
@@ -303,7 +391,12 @@ def chat_loop(session):
         exit_keywords = ['quit', 'exit', 'bye', 'goodbye', "that's it", 'thats it', 'nothing else', 'no more']
         if any(keyword in user_message.lower() for keyword in exit_keywords):
             show_saved_appliances(session_id)
-            export_session_json(session_id, user_id, family_id)
+            filepath, export_data = export_session_json(session_id, user_id, family_id)
+            
+            # Offer RAMP simulation after export
+            if export_data:
+                ask_run_ramp_simulation(export_data)
+            
             # Recount appliances from DB after possible edits
             final_count = len(db.get_session_appliances(session_id))
             print(f"\n✓ Session complete! {final_count} appliances saved. Thank you!\n")
@@ -322,6 +415,27 @@ def chat_loop(session):
         
         if user_message.lower() == 'export':
             export_session_json(session_id, user_id, family_id)
+            continue
+        
+        if user_message.lower() == 'simulate':
+            # Run RAMP simulation mid-conversation
+            export_data, _ = build_export_data(session_id, user_id, family_id)
+            if export_data and export_data.get('appliances'):
+                if RAMP_AVAILABLE:
+                    num_profiles = 1
+                    try:
+                        num_input = input("Number of daily profiles to simulate [1]: ").strip()
+                        if num_input:
+                            num_profiles = max(1, int(num_input))
+                    except ValueError:
+                        num_profiles = 1
+                    
+                    run_ramp_simulation(export_data, num_profiles=num_profiles, show_plot=True)
+                else:
+                    print("\n❌ RAMP is not installed.")
+                    print("   Install with: pip install ramp-demand\n")
+            else:
+                print("\n📊 No appliances to simulate yet. Keep chatting to add some!\n")
             continue
         
         if user_message.lower() == 'schedule':
@@ -407,7 +521,9 @@ def chat_loop(session):
                         if consecutive_duplicates >= MAX_DUPLICATES:
                             print(f"\n⚠️  Too many duplicates. Ending conversation.\n")
                             show_saved_appliances(session_id)
-                            export_session_json(session_id, user_id, family_id)
+                            filepath, export_data = export_session_json(session_id, user_id, family_id)
+                            if export_data:
+                                ask_run_ramp_simulation(export_data)
                             break
                     else:
                         consecutive_duplicates = 0
@@ -456,6 +572,12 @@ def main():
         init_pool()
         session = start_new_session()
         print(f"🆔 Session ID: {session['session_id'][:8]}...")
+        
+        if RAMP_AVAILABLE:
+            print("⚡ RAMP simulation: Ready")
+        else:
+            print("💡 RAMP simulation: Not available (install with: pip install ramp-demand)")
+        
         chat_loop(session)
     except KeyboardInterrupt:
         print("\n\n👋 Exiting...\n")

@@ -1,0 +1,41 @@
+{
+  "survey_date": "2026-02-12 22:53:41",
+  "User_ID": "863efce2-8ed6-478d-92c0-4e00d05f8dc6",
+  "Family_ID": "dfd0fce7-6c01-4ebb-a2fc-b37afce0ea41",
+  "session_id": "539343d7-b789-44f6-adf6-b413ab9579c7",
+  "random_var_w": 0.2,
+  "total_appliances": 2,
+  "total_daily_energy_kwh": 3.64,
+  "appliances": [
+    {
+      "name": "Bulb",
+      "number": 1,
+      "power": 10,
+      "func_time": 240,
+      "num_windows": 1,
+      "window_1": [
+        1080,
+        1320
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Refrigerator",
+      "number": 1,
+      "power": 150,
+      "func_time": 1440,
+      "num_windows": 1,
+      "window_1": [
+        0,
+        1440
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    }
+  ]
+}

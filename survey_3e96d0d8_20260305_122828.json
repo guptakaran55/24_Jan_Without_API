@@ -1,0 +1,26 @@
+{
+  "survey_date": "2026-03-05 12:28:28",
+  "User_ID": "a50007f2-6935-4d65-abf7-bc6cd3be5a71",
+  "Family_ID": "758f4c5b-0640-4394-bcfa-2b475fd506d5",
+  "session_id": "3e96d0d8-acf7-455b-b265-227cb814bf3a",
+  "random_var_w": 0.2,
+  "total_appliances": 1,
+  "total_daily_energy_kwh": 0.06,
+  "appliances": [
+    {
+      "name": "Light Bulb",
+      "number": 1,
+      "power": 10,
+      "func_time": 360,
+      "num_windows": 1,
+      "window_1": [
+        1020,
+        1380
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    }
+  ]
+}

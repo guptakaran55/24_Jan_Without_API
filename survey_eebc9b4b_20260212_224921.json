@@ -1,0 +1,41 @@
+{
+  "survey_date": "2026-02-12 22:49:21",
+  "User_ID": "5bc331d3-156c-4659-a272-4b2fb65d1634",
+  "Family_ID": "9d7b1281-462e-4c84-b9ad-a10e9f09087f",
+  "session_id": "eebc9b4b-b9f7-43ed-8cac-cd36b626e7f9",
+  "random_var_w": 0.2,
+  "total_appliances": 2,
+  "total_daily_energy_kwh": 2.44,
+  "appliances": [
+    {
+      "name": "Light Bulb",
+      "number": 1,
+      "power": 10,
+      "func_time": 240,
+      "num_windows": 1,
+      "window_1": [
+        1080,
+        1320
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    },
+    {
+      "name": "Refrigerator",
+      "number": 1,
+      "power": 100,
+      "func_time": 1440,
+      "num_windows": 1,
+      "window_1": [
+        0,
+        1440
+      ],
+      "func_cycle": 1,
+      "fixed": "no",
+      "occasional_use": 1.0,
+      "wd_we_type": 2
+    }
+  ]
+}
